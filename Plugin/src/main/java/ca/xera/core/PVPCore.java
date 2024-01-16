@@ -1,11 +1,13 @@
 package ca.xera.core;
 
+import ca.xera.core.common.velocity.PluginMessaging;
 import lombok.Getter;
 import me.txmc.protocolapi.reflection.ClassProcessor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.v1_12_R1.CraftServer;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -21,7 +23,28 @@ public final class PVPCore extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // load runtime mixin injections
         loadMixins();
+
+        // register plugin messaging channel
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+
+        // plugin messaging test command
+        PluginMessaging messaging = new PluginMessaging(this);
+        registerCommand("connect", (sender, command, label, args) -> {
+            if (sender instanceof Player && args.length > 0) {
+                Player player = (Player) sender;
+                messaging.connect(player, args[0]);
+            }
+            return true;
+        });
+    }
+
+    @Override
+    public void onDisable() {
+        // make sure to unregister the registered channels in case of a reload
+        this.getServer().getMessenger().unregisterOutgoingPluginChannel(this);
+        this.getServer().getMessenger().unregisterIncomingPluginChannel(this);
     }
 
     private void loadMixins() {
@@ -41,10 +64,6 @@ public final class PVPCore extends JavaPlugin {
         } finally {
             if (mixinJar.exists()) mixinJar.delete();
         }
-    }
-
-    @Override
-    public void onDisable() {
     }
 
     public void registerListener(Listener listener) {
