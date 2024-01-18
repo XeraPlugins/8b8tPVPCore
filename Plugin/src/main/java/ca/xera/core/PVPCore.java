@@ -1,6 +1,7 @@
 package ca.xera.core;
 
 import ca.xera.core.common.velocity.PluginMessaging;
+import ca.xera.core.velocity.ChatListener;
 import lombok.Getter;
 import me.txmc.protocolapi.reflection.ClassProcessor;
 import org.bukkit.Bukkit;
@@ -21,8 +22,12 @@ import java.nio.file.Files;
 @Getter
 public final class PVPCore extends JavaPlugin {
 
+    private static PVPCore plugin;
+
     @Override
     public void onEnable() {
+        plugin = this;
+
         // load runtime mixin injections
         loadMixins();
 
@@ -38,6 +43,8 @@ public final class PVPCore extends JavaPlugin {
             }
             return true;
         });
+
+        registerListener(new ChatListener());
     }
 
     @Override
@@ -82,5 +89,9 @@ public final class PVPCore extends JavaPlugin {
             }
         });
 
+    }
+
+    public static PVPCore get() {
+        return plugin;
     }
 }
