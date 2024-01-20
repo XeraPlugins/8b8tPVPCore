@@ -2,6 +2,7 @@ package ca.xera.core;
 
 import ca.xera.core.common.velocity.PluginMessaging;
 import ca.xera.core.velocity.ChatListener;
+import ca.xera.core.velocity.command.WhisperCommand;
 import lombok.Getter;
 import me.txmc.protocolapi.reflection.ClassProcessor;
 import org.bukkit.Bukkit;
@@ -23,10 +24,12 @@ import java.nio.file.Files;
 public final class PVPCore extends JavaPlugin {
 
     private static PVPCore plugin;
+    public static PluginMessaging messaging;
 
     @Override
     public void onEnable() {
         plugin = this;
+        messaging = new PluginMessaging(this);
 
         // load runtime mixin injections
         loadMixins();
@@ -35,7 +38,6 @@ public final class PVPCore extends JavaPlugin {
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
 
         // plugin messaging test command
-        PluginMessaging messaging = new PluginMessaging(this);
         registerCommand("connect", (sender, command, label, args) -> {
             if (sender instanceof Player && args.length > 0) {
                 Player player = (Player) sender;
@@ -45,6 +47,7 @@ public final class PVPCore extends JavaPlugin {
         });
 
         registerListener(new ChatListener());
+        Bukkit.getPluginCommand("whisper").setExecutor(new WhisperCommand(this));
     }
 
     @Override
