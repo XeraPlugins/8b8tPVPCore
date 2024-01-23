@@ -2,7 +2,6 @@ package ca.xera.core;
 
 import ca.xera.core.common.velocity.PluginMessaging;
 import ca.xera.core.velocity.ChatListener;
-import ca.xera.core.velocity.command.WhisperCommand;
 import lombok.Getter;
 import me.txmc.protocolapi.reflection.ClassProcessor;
 import org.bukkit.Bukkit;
@@ -47,7 +46,6 @@ public final class PVPCore extends JavaPlugin {
         });
 
         registerListener(new ChatListener());
-        Bukkit.getPluginCommand("whisper").setExecutor(new WhisperCommand(this));
     }
 
     @Override

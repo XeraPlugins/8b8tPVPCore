@@ -3,12 +3,3 @@ version: 1.0-SNAPSHOT
 main: ca.xera.core.PVPCore
 authors: [ SevJ6, 254n_m ]
 description: Main core plugin for 8b8t PVP by SevJ6, plugin base by 254n_m
-commands:
-  whisper:
-    description: send a private message to another player
-    aliases:
-      - w
-      - t
-      - tell
-      - msg
-      - message
