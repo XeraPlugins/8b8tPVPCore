@@ -1,9 +1,16 @@
 package ca.xera.core;
 
+import ca.xera.core.common.NBTHelper;
 import ca.xera.core.common.velocity.PluginMessaging;
+import ca.xera.core.db.MongoConnector;
 import ca.xera.core.velocity.ChatListener;
+import ca.xera.core.velocity.InventorySync;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
 import lombok.Getter;
 import me.txmc.protocolapi.reflection.ClassProcessor;
+import net.minecraft.server.v1_12_R1.NBTTagCompound;
+import net.minecraft.server.v1_12_R1.NBTTagList;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -24,28 +31,44 @@ public final class PVPCore extends JavaPlugin {
 
     private static PVPCore plugin;
     public static PluginMessaging messaging;
+    private MongoConnector connector;
 
     @Override
     public void onEnable() {
         plugin = this;
         messaging = new PluginMessaging(this);
+        connector = new MongoConnector();
 
         // load runtime mixin injections
         loadMixins();
 
-        // register plugin messaging channel
+        // register plugin messaging
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "xera:invrequest");
+        getServer().getMessenger().registerIncomingPluginChannel(this, "xera:invreply", new InventorySync());
+
+        // register events
+        registerListener(new ChatListener());
 
         // plugin messaging test command
         registerCommand("connect", (sender, command, label, args) -> {
             if (sender instanceof Player && args.length > 0) {
                 Player player = (Player) sender;
+                sendSyncReply(player);
                 messaging.connect(player, args[0]);
             }
             return true;
         });
+    }
 
-        registerListener(new ChatListener());
+    private void sendSyncReply(Player player) {
+        NBTTagList items = new NBTTagList();
+        NBTHelper.savePlayerInventoryToTaglist(player, items);
+        NBTTagCompound requested = new NBTTagCompound();
+        requested.set("InvContents", items);
+        ByteArrayDataOutput out = ByteStreams.newDataOutput();
+        NBTHelper.writeNBT(requested, out);
+        player.sendPluginMessage(PVPCore.get(), "xera:invrequest", out.toByteArray());
     }
 
     @Override
@@ -53,6 +76,7 @@ public final class PVPCore extends JavaPlugin {
         // make sure to unregister the registered channels in case of a reload
         this.getServer().getMessenger().unregisterOutgoingPluginChannel(this);
         this.getServer().getMessenger().unregisterIncomingPluginChannel(this);
+        connector.getClient().close();
     }
 
     private void loadMixins() {

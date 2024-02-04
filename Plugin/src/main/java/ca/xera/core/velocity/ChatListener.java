@@ -2,7 +2,7 @@ package ca.xera.core.velocity;
 
 import ca.xera.core.PVPCore;
 import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,7 +14,7 @@ public class ChatListener implements Listener {
     public void onChat(AsyncPlayerChatEvent event) {
         event.setCancelled(true);
         Player player = event.getPlayer();
-        String message = String.format("<%s> %s", player.getName(), event.getMessage());
+        String message = String.format("<%s> %s", player.getName(), event.getMessage().startsWith(">") ? ChatColor.GREEN + event.getMessage() : event.getMessage());
         ByteArrayDataOutput out = PVPCore.messaging.newDataOutput();
 
         out.writeUTF("Message");
