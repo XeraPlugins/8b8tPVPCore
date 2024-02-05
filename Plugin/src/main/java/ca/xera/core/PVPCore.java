@@ -1,12 +1,16 @@
 package ca.xera.core;
 
 import ca.xera.core.common.NBTHelper;
+import ca.xera.core.common.Utils;
 import ca.xera.core.common.velocity.PluginMessaging;
-import ca.xera.core.db.MongoConnector;
+import ca.xera.core.kit.Kit;
+import ca.xera.core.kit.KitHelper;
 import ca.xera.core.velocity.ChatListener;
 import ca.xera.core.velocity.InventorySync;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import lombok.Getter;
 import me.txmc.protocolapi.reflection.ClassProcessor;
 import net.minecraft.server.v1_12_R1.NBTTagCompound;
@@ -29,15 +33,19 @@ import java.nio.file.Files;
 @Getter
 public final class PVPCore extends JavaPlugin {
 
-    private static PVPCore plugin;
     public static PluginMessaging messaging;
-    private MongoConnector connector;
+    private static PVPCore plugin;
+    private MongoClient client;
+
+    public static PVPCore get() {
+        return plugin;
+    }
 
     @Override
     public void onEnable() {
         plugin = this;
         messaging = new PluginMessaging(this);
-        connector = new MongoConnector();
+        client = MongoClients.create("mongodb://vps01.iceanarchy.org:27017");
 
         // load runtime mixin injections
         loadMixins();
@@ -52,10 +60,36 @@ public final class PVPCore extends JavaPlugin {
 
         // plugin messaging test command
         registerCommand("connect", (sender, command, label, args) -> {
-            if (sender instanceof Player && args.length > 0) {
-                Player player = (Player) sender;
+            if (sender instanceof Player player && args.length > 0) {
                 sendSyncReply(player);
                 messaging.connect(player, args[0]);
+            }
+            return true;
+        });
+
+        // test kit serialization to the database. NOT PRODUCTION YET, TESTING PURPOSES FOR NOW
+        registerCommand("savekit", (sender, command, label, args) -> {
+            if (sender instanceof Player player && args.length > 0) {
+                NBTTagList items = new NBTTagList();
+                NBTHelper.savePlayerInventoryToTaglist(player, items);
+                NBTTagCompound invetoryTag = new NBTTagCompound();
+                invetoryTag.set("InvContents", items);
+                Kit kit = new Kit(args[0], invetoryTag);
+                KitHelper.saveKitToDatabase(kit);
+                Utils.sendMessage(player, String.format("&a%s &3saved to the database.", args[0]));
+            }
+            return true;
+        });
+
+        registerCommand("loadkit", (sender, command, label, args) -> {
+            if (sender instanceof Player player && args.length > 0) {
+                Kit kit = KitHelper.getKit(args[0]);
+                if (kit == null) {
+                    Utils.sendMessage(player, String.format("&c%s is not a kit!", args[0]));
+                } else {
+                    kit.setLoadout(player);
+                    Utils.sendMessage(player, String.format("&3Equipped kit &a%s", args[0]));
+                }
             }
             return true;
         });
@@ -76,7 +110,6 @@ public final class PVPCore extends JavaPlugin {
         // make sure to unregister the registered channels in case of a reload
         this.getServer().getMessenger().unregisterOutgoingPluginChannel(this);
         this.getServer().getMessenger().unregisterIncomingPluginChannel(this);
-        connector.getClient().close();
     }
 
     private void loadMixins() {
@@ -114,9 +147,5 @@ public final class PVPCore extends JavaPlugin {
             }
         });
 
-    }
-
-    public static PVPCore get() {
-        return plugin;
     }
 }
